@@ -23,7 +23,7 @@ dotenv.config()
 
 const app = express()   
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://desarapen.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -37,7 +37,7 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5000", 'https://desarapen-backend.onrender.com/', 'https://desarapen.vercel.app'],
+    origin: ["http://localhost:5173", 'https://desarapen.vercel.app'],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ['Content-Type', 'Authorization'],
