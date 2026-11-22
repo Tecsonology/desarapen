@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, LockKeyhole, User } from "lucide-react";
-import { loginUser } from "./api/userService";
 
 type LoginProps = {
   onLogin: (credentials: {

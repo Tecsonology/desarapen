@@ -17,7 +17,7 @@ import {
 
 import type { LoggedInUser } from "./api/userService";
 
-const API_URL = `${import.meta.env.VITE_PUBLIC_URL}/api`;
+const API_URL = `${import.meta.env.VITE_PUBLIC_URL}`;
 
 type Product = {
   _id: string;
