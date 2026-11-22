@@ -305,6 +305,11 @@ exports.loginUser = async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    console.log("LOGIN CONTROLLER EXECUTED");
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("JWT_SECRET EXISTS:", !!process.env.JWT_SECRET);
+
+
     res.cookie("authToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
