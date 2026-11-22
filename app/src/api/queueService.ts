@@ -18,7 +18,7 @@ const handleResponse = async ( response: Response ) => {
 }
 
 export const createQueue = async (data : Queue ) => {
-    const response = await fetch(`${URL}/`, {
+    const response = await fetch(`${URL}`, {
         method: 'POST',
         credentials: "include",
         headers: {
