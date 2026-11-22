@@ -1,6 +1,6 @@
 import type { QueueOrder, QueueStatus } from "../types/queueTypes"
 
-const URL = `${import.meta.env.VITE_PUBLIC_URL}/queue`
+const URL = `${import.meta.env.VITE_PUBLIC_URL}/api/queue`
 
 type Queue = {
     orders: QueueOrder[],
