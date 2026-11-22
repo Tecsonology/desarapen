@@ -95,8 +95,8 @@ const Dashboard = () => {
       };
 
       const [productsRes, ordersRes] = await Promise.all([
-        fetch(`${API_URL}/products`, { headers }),
-        fetch(`${API_URL}/orders`, { headers }),
+        fetch(`${API_URL}/api/products`, { headers }),
+        fetch(`${API_URL}/api/orders`, { headers }),
       ]);
 
       if (!productsRes.ok || !ordersRes.ok) {
