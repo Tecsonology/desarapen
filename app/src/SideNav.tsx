@@ -29,11 +29,12 @@ const SideNav = () => {
   const navItems = [
     { title: "Dashboard", icon: LayoutDashboard, path: "" },
     { title: "Point of Sale", icon: ShoppingCart, path: "pos" },
+    { title: "Kitchen Display", icon: Logs, path: "queue" },
     { title: "Products", icon: Package, path: "products" },
     { title: "Orders", icon: ClipboardList, path: "orders" },
     { title: "Inventory", icon: Boxes, path: "inventory" },
     { title: "Reports", icon: ChartNoAxesCombined, path: "reports" },
-     { title: "Order Display", icon: Logs, path: "queue" }
+     
   ];
 
   const handleLogout = async () => {

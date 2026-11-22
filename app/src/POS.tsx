@@ -5,6 +5,8 @@ import Payment from "./Payment";
 import { getProducts, updateProduct } from "./api/productService";
 import { createOrder } from "./api/orderService";
 import type { CreateOrder } from "./api/orderService";
+import { createQueue } from "./api/queueService";
+import type { Queue, QueueOrder } from "./types/queueTypes";
 
 import { ArrowLeft } from "lucide-react";
 
@@ -52,7 +54,7 @@ export type CartItem = Product & {
 };
 
 type PosProp = {
-  showNav: ()=> void
+  showNav?: ()=> void
 }
 
 // ==========================================
@@ -314,6 +316,8 @@ function POS({showNav} : PosProp) {
 
     setProducts(updatedProducts);
 
+    
+
     return response;
   };
 
@@ -342,6 +346,25 @@ function POS({showNav} : PosProp) {
 
       // Save order and refresh inventory.
       await orderSuccess(cash);
+
+      const queueItems: QueueOrder[] = cartItems.map((item) => ({
+        productName: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        size: item.selectedSize.volume,
+        price: item.selectedSize.price,
+        subtotal: item.selectedSize.price * item.quantity,
+      }));
+
+
+      const sendQueue = await createQueue({
+        orders: queueItems,
+        status: "pending"
+      })
+
+      console.log(sendQueue)
+      
+
 
       // Update receipt details after successful order.
       setLastReceipt(receiptItems);

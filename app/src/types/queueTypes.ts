@@ -1,5 +1,6 @@
 export interface QueueOrder {
   productName: string;
+  category: String;
   quantity: number;
   size: string;
   price: number;

@@ -143,6 +143,25 @@ exports.updateQueueStatus = async (
       return;
     }
 
+    if(status === "done"){
+       const queue = await Queue.findByIdAndDelete(req.params.id);
+
+        if (!queue) {
+            return res.status(404).json({
+                message: "Queue not found."
+            });
+        }
+
+        req.app.get("io").emit("queue:deleted", queue.id.toString());
+
+        res.status(200).json({
+          message: "Queue deleted successfully.",
+          queue,
+        });
+
+        return;
+    }
+
     const queue = await Queue.findByIdAndUpdate(
       req.params.id,
       { status },
