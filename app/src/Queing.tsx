@@ -9,7 +9,7 @@ const Queing = () => {
   useEffect(() => {
     const fetchQueues = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/queue", {
+        const response = await fetch(import.meta.env.VITE_PUBLIC_URL, {
           credentials: "include",
         });
 
@@ -63,7 +63,7 @@ const Queing = () => {
 
   const changeStatus = async (id: string, status: QueueStatus) => {
     try {
-      await fetch(`http://localhost:5000/api/queue/${id}/status`, {
+      await fetch(`${import.meta.env.VITE_PUBLIC_URL}/queue/${id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

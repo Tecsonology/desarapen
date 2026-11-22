@@ -1,5 +1,5 @@
 
-const API_URL = "http://localhost:5000/api/products";
+const API_URL = `${import.meta.env.VITE_PUBLIC_URL}/api/products`;
 
 export type ProductSize = {
   id: string;
