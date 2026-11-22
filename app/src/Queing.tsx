@@ -9,7 +9,7 @@ const Queing = () => {
   useEffect(() => {
     const fetchQueues = async () => {
       try {
-        const response = await fetch(import.meta.env.VITE_PUBLIC_URL, {
+        const response = await fetch(`${import.meta.env.VITE_PUBLIC_UR}/api/queue`, {
           credentials: "include",
         });
 
