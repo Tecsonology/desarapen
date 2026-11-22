@@ -1,5 +1,5 @@
 
-const URL = `${import.meta.env.VITE_PUBLIC_URL}/users`;
+const URL = `${import.meta.env.VITE_PUBLIC_URL}/api/users`;
 
 type LoginCredentials = {
   username: string;
