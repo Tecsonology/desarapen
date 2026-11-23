@@ -63,7 +63,7 @@ const Queing = () => {
 
   const changeStatus = async (id: string, status: QueueStatus) => {
     try {
-      await fetch(`${import.meta.env.VITE_PUBLIC_URL}/queue/${id}/status`, {
+      await fetch(`${import.meta.env.VITE_PUBLIC_URL}/api/queue/${id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
