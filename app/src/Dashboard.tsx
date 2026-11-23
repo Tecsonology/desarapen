@@ -427,8 +427,8 @@ const Dashboard = () => {
                     <div
                       className={`w-full rounded-t-xl transition-all duration-500 ${
                         index === 6
-                          ? "bg-blue-600"
-                          : "bg-blue-100 hover:bg-blue-300"
+                          ? "bg-green-600"
+                          : "bg-green-100 hover:bg-green-300"
                       }`}
                       style={{ height: `${height}%` }}
                       title={money(day.sales)}

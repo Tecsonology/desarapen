@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+import type { ElementType } from "react";
 import {
   Download,
   RefreshCw,
@@ -7,6 +8,11 @@ import {
   TrendingUp,
   ShoppingBag,
   Wallet,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  Receipt,
+  Package,
 } from "lucide-react";
 
 const API_URL = `${import.meta.env.VITE_PUBLIC_URL}/api`;
@@ -49,25 +55,80 @@ const isCompleted = (order: Order) =>
   order.orderStatus === "Completed" &&
   order.paymentStatus === "Paid";
 
+// ==========================================
+// STAT CARD
+// ==========================================
+
+type StatCardProps = {
+  title: string;
+  value: string | number;
+  icon: ElementType;
+  description?: string;
+};
+
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  description,
+}: StatCardProps) => (
+  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-medium text-slate-500">
+        {title}
+      </p>
+
+      <div className="rounded-lg bg-teal-50 p-2.5 text-teal-600">
+        <Icon size={20} />
+      </div>
+    </div>
+
+    <h2 className="mt-4 text-2xl font-bold text-slate-900">
+      {value}
+    </h2>
+
+    {description && (
+      <p className="mt-1 text-xs text-slate-400">
+        {description}
+      </p>
+    )}
+  </div>
+);
+
+// ==========================================
+// REPORTS
+// ==========================================
+
 const Reports = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const today = getLocalDate(new Date());
+
   const firstDay = getLocalDate(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    )
   );
 
   const [startDate, setStartDate] = useState(firstDay);
   const [endDate, setEndDate] = useState(today);
+
+  // ==========================================
+  // FETCH ORDERS
+  // ==========================================
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`${API_URL}/orders`);
+      const response = await fetch(`${API_URL}/orders`, {
+        credentials: "include",
+      });
 
       if (!response.ok) {
         throw new Error("Unable to fetch orders.");
@@ -75,10 +136,14 @@ const Reports = () => {
 
       const data = await response.json();
 
-      setOrders(Array.isArray(data) ? data : data.orders || []);
+      setOrders(
+        Array.isArray(data) ? data : data.orders || []
+      );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Something went wrong."
+        err instanceof Error
+          ? err.message
+          : "Something went wrong."
       );
     } finally {
       setLoading(false);
@@ -89,15 +154,28 @@ const Reports = () => {
     fetchOrders();
   }, []);
 
+  // ==========================================
+  // FILTER ORDERS
+  // ==========================================
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       if (!isCompleted(order)) return false;
 
-      const orderDate = getLocalDate(new Date(order.createdAt));
+      const orderDate = getLocalDate(
+        new Date(order.createdAt)
+      );
 
-      return orderDate >= startDate && orderDate <= endDate;
+      return (
+        orderDate >= startDate &&
+        orderDate <= endDate
+      );
     });
   }, [orders, startDate, endDate]);
+
+  // ==========================================
+  // SALES SUMMARY
+  // ==========================================
 
   const grossSales = filteredOrders.reduce(
     (sum, order) => sum + order.subtotal,
@@ -119,6 +197,10 @@ const Reports = () => {
   const averageOrderValue =
     totalOrders > 0 ? netSales / totalOrders : 0;
 
+  // ==========================================
+  // PAYMENT BREAKDOWN
+  // ==========================================
+
   const paymentBreakdown = useMemo(() => {
     const totals: Record<string, number> = {
       Cash: 0,
@@ -128,11 +210,22 @@ const Reports = () => {
 
     filteredOrders.forEach((order) => {
       totals[order.paymentMethod] =
-        (totals[order.paymentMethod] || 0) + order.total;
+        (totals[order.paymentMethod] || 0) +
+        order.total;
     });
 
     return totals;
   }, [filteredOrders]);
+
+  const paymentIcons: Record<string, ElementType> = {
+    Cash: Banknote,
+    GCash: Smartphone,
+    Card: CreditCard,
+  };
+
+  // ==========================================
+  // BEST SELLING PRODUCTS
+  // ==========================================
 
   const bestSellingProducts = useMemo(() => {
     const products: Record<
@@ -150,8 +243,10 @@ const Reports = () => {
         }
 
         products[item.name].quantity += item.quantity;
+
         products[item.name].sales +=
-          item.subtotal || item.unitPrice * item.quantity;
+          item.subtotal ||
+          item.unitPrice * item.quantity;
       });
     });
 
@@ -162,6 +257,10 @@ const Reports = () => {
       }))
       .sort((a, b) => b.quantity - a.quantity);
   }, [filteredOrders]);
+
+  // ==========================================
+  // EXPORT CSV
+  // ==========================================
 
   const exportCSV = () => {
     const headers = [
@@ -209,53 +308,45 @@ const Reports = () => {
     URL.revokeObjectURL(url);
   };
 
-  const StatCard = ({
-    title,
-    value,
-    icon: Icon,
-  }: {
-    title: string;
-    value: string | number;
-    icon: React.ElementType;
-  }) => (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{title}</p>
-        <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
-          <Icon size={20} />
-        </div>
-      </div>
-
-      <h2 className="mt-3 text-2xl font-bold text-gray-900">
-        {value}
-      </h2>
-    </div>
-  );
+  // ==========================================
+  // LOADING
+  // ==========================================
 
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <RefreshCw className="animate-spin text-blue-600" size={28} />
+        <RefreshCw
+          className="animate-spin text-teal-600"
+          size={28}
+        />
       </div>
     );
   }
 
+  // ==========================================
+  // UI
+  // ==========================================
+
   return (
     <div className="w-full min-w-0 space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+
+      {/* HEADER */}
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Reports
+          <h1 className="text-2xl font-bold text-slate-900">
+            Sales Reports
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Review your store's sales and transaction performance.
+
+          <p className="mt-1 text-sm text-slate-500">
+            Monitor your store's sales and transaction performance.
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={fetchOrders}
-            className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
           >
             <RefreshCw size={16} />
             Refresh
@@ -264,7 +355,7 @@ const Reports = () => {
           <button
             onClick={exportCSV}
             disabled={filteredOrders.length === 0}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download size={16} />
             Export CSV
@@ -272,128 +363,182 @@ const Reports = () => {
         </div>
       </div>
 
+      {/* ERROR */}
+
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
           {error}
         </div>
       )}
 
-      {/* Date Filters */}
-      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Start Date
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border px-3">
-            <CalendarDays size={17} className="text-gray-400" />
+      {/* DATE FILTER */}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <CalendarDays
+            size={19}
+            className="text-teal-600"
+          />
+
+          <h2 className="font-semibold text-slate-900">
+            Report Period
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="w-full sm:w-auto">
+            <label className="mb-2 block text-sm font-medium text-slate-600">
+              Start Date
+            </label>
+
             <input
               type="date"
               value={startDate}
               max={endDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full py-2 text-sm outline-none"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:w-48"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            End Date
-          </label>
-          <div className="flex items-center gap-2 rounded-lg border px-3">
-            <CalendarDays size={17} className="text-gray-400" />
+          <div className="w-full sm:w-auto">
+            <label className="mb-2 block text-sm font-medium text-slate-600">
+              End Date
+            </label>
+
             <input
               type="date"
               value={endDate}
               min={startDate}
               max={today}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full py-2 text-sm outline-none"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:w-48"
             />
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setStartDate(firstDay);
+                setEndDate(today);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-teal-500 hover:text-teal-600"
+            >
+              This Month
+            </button>
+
+            <button
+              onClick={() => {
+                setStartDate(today);
+                setEndDate(today);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-teal-500 hover:text-teal-600"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* SUMMARY CARDS */}
+
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900">
+            Sales Overview
+          </h2>
+
+          <span className="text-xs text-slate-400">
+            {totalOrders} completed orders
+          </span>
         </div>
 
-        <button
-          onClick={() => {
-            setStartDate(firstDay);
-            setEndDate(today);
-          }}
-          className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
-        >
-          This Month
-        </button>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            title="Gross Sales"
+            value={money(grossSales)}
+            icon={TrendingUp}
+            description="Before discounts"
+          />
 
-        <button
-          onClick={() => {
-            setStartDate(today);
-            setEndDate(today);
-          }}
-          className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
-        >
-          Today
-        </button>
+          <StatCard
+            title="Total Discounts"
+            value={money(totalDiscount)}
+            icon={Wallet}
+            description="Total discounts applied"
+          />
+
+          <StatCard
+            title="Net Sales"
+            value={money(netSales)}
+            icon={ShoppingBag}
+            description="After discounts"
+          />
+
+          <StatCard
+            title="Total Orders"
+            value={totalOrders}
+            icon={Receipt}
+            description="Completed and paid orders"
+          />
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="Gross Sales"
-          value={money(grossSales)}
-          icon={TrendingUp}
-        />
-
-        <StatCard
-          title="Total Discounts"
-          value={money(totalDiscount)}
-          icon={Wallet}
-        />
-
-        <StatCard
-          title="Net Sales"
-          value={money(netSales)}
-          icon={ShoppingBag}
-        />
-
-        <StatCard
-          title="Total Orders"
-          value={totalOrders}
-          icon={CalendarDays}
-        />
-      </div>
+      {/* PAYMENT AND PRODUCTS */}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* Payment Breakdown */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900">
-            Payment Method Breakdown
-          </h2>
-          <p className="mb-6 text-sm text-gray-500">
-            Sales collected by payment method
-          </p>
 
-          <div className="space-y-5">
+        {/* PAYMENT BREAKDOWN */}
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-6">
+            <h2 className="font-semibold text-slate-900">
+              Payment Breakdown
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Sales collected by payment method
+            </p>
+          </div>
+
+          <div className="space-y-6">
             {Object.entries(paymentBreakdown).map(
               ([method, amount]) => {
                 const percentage =
-                  netSales > 0 ? (amount / netSales) * 100 : 0;
+                  netSales > 0
+                    ? (amount / netSales) * 100
+                    : 0;
+
+                const Icon =
+                  paymentIcons[method] || Wallet;
 
                 return (
                   <div key={method}>
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span className="font-medium">{method}</span>
-                      <span className="text-gray-500">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-lg bg-teal-50 p-2 text-teal-600">
+                          <Icon size={18} />
+                        </div>
+
+                        <span className="text-sm font-semibold text-slate-700">
+                          {method}
+                        </span>
+                      </div>
+
+                      <span className="text-sm font-semibold text-slate-900">
                         {money(amount)}
                       </span>
                     </div>
 
-                    <div className="h-3 overflow-hidden rounded-full bg-gray-100">
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-blue-500"
-                        style={{ width: `${percentage}%` }}
+                        className="h-full rounded-full bg-teal-500 transition-all duration-500"
+                        style={{
+                          width: `${percentage}%`,
+                        }}
                       />
                     </div>
 
-                    <p className="mt-1 text-right text-xs text-gray-400">
+                    <p className="mt-1.5 text-right text-xs text-slate-400">
                       {percentage.toFixed(1)}%
                     </p>
                   </div>
@@ -403,22 +548,34 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Best Selling Products */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900">
-            Best-Selling Products
-          </h2>
-          <p className="mb-5 text-sm text-gray-500">
-            Ranked by quantity sold
-          </p>
+        {/* BEST SELLING PRODUCTS */}
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-5">
+            <h2 className="font-semibold text-slate-900">
+              Best-Selling Products
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Products ranked by quantity sold
+            </p>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="pb-3">Product</th>
-                  <th className="pb-3 text-center">Qty Sold</th>
-                  <th className="pb-3 text-right">Sales</th>
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                  <th className="rounded-l-lg px-3 py-3 font-semibold">
+                    Product
+                  </th>
+
+                  <th className="px-3 py-3 text-center font-semibold">
+                    Qty Sold
+                  </th>
+
+                  <th className="rounded-r-lg px-3 py-3 text-right font-semibold">
+                    Sales
+                  </th>
                 </tr>
               </thead>
 
@@ -427,20 +584,25 @@ const Reports = () => {
                   (product, index) => (
                     <tr
                       key={product.name}
-                      className="border-b last:border-0"
+                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                     >
-                      <td className="py-3">
-                        <span className="mr-2 text-xs text-gray-400">
-                          {index + 1}.
-                        </span>
-                        <span className="font-medium">
-                          {product.name}
-                        </span>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-slate-400">
+                            {index + 1}.
+                          </span>
+
+                          <span className="font-medium text-slate-700">
+                            {product.name}
+                          </span>
+                        </div>
                       </td>
-                      <td className="py-3 text-center">
+
+                      <td className="px-3 py-3 text-center text-slate-600">
                         {product.quantity}
                       </td>
-                      <td className="py-3 text-right font-semibold">
+
+                      <td className="px-3 py-3 text-right font-semibold text-slate-900">
                         {money(product.sales)}
                       </td>
                     </tr>
@@ -451,8 +613,12 @@ const Reports = () => {
                   <tr>
                     <td
                       colSpan={3}
-                      className="py-8 text-center text-gray-400"
+                      className="py-10 text-center text-sm text-slate-400"
                     >
+                      <Package
+                        size={28}
+                        className="mx-auto mb-2 text-slate-300"
+                      />
                       No product sales for this period.
                     </td>
                   </tr>
@@ -463,33 +629,54 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Sales Transactions */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+      {/* SALES TRANSACTIONS */}
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-5">
           <div>
-            <h2 className="font-semibold text-gray-900">
+            <h2 className="font-semibold text-slate-900">
               Sales Transactions
             </h2>
-            <p className="text-sm text-gray-500">
+
+            <p className="mt-1 text-sm text-slate-500">
               Completed and paid orders within the selected period
             </p>
           </div>
 
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600">
-            {filteredOrders.length} transactions
+          <span className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-700">
+            {filteredOrders.length} Transactions
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Order Number</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Payment</th>
-                <th className="px-4 py-3 text-right">Subtotal</th>
-                <th className="px-4 py-3 text-right">Discount</th>
-                <th className="px-4 py-3 text-right">Total</th>
+          <table className="w-full min-w-[750px] text-left text-sm">
+
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <th className="px-5 py-4 font-semibold">
+                  Order Number
+                </th>
+
+                <th className="px-5 py-4 font-semibold">
+                  Date
+                </th>
+
+                <th className="px-5 py-4 font-semibold">
+                  Payment
+                </th>
+
+                <th className="px-5 py-4 text-right font-semibold">
+                  Subtotal
+                </th>
+
+                <th className="px-5 py-4 text-right font-semibold">
+                  Discount
+                </th>
+
+                <th className="px-5 py-4 text-right font-semibold">
+                  Total
+                </th>
               </tr>
             </thead>
 
@@ -504,24 +691,31 @@ const Reports = () => {
                 .map((order) => (
                   <tr
                     key={order._id}
-                    className="border-b last:border-0 hover:bg-gray-50"
+                    className="border-b border-slate-100 transition hover:bg-slate-50 last:border-0"
                   >
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-5 py-4 font-semibold text-slate-800">
                       {order.orderNumber}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+
+                    <td className="px-5 py-4 text-slate-500">
                       {new Date(order.createdAt).toLocaleString("en-PH")}
                     </td>
-                    <td className="px-4 py-3">
-                      {order.paymentMethod}
+
+                    <td className="px-5 py-4">
+                      <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                        {order.paymentMethod}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+
+                    <td className="px-5 py-4 text-right text-slate-600">
                       {money(order.subtotal)}
                     </td>
-                    <td className="px-4 py-3 text-right text-red-500">
+
+                    <td className="px-5 py-4 text-right text-red-500">
                       -{money(order.discount || 0)}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">
+
+                    <td className="px-5 py-4 text-right font-bold text-slate-900">
                       {money(order.total)}
                     </td>
                   </tr>
@@ -531,9 +725,20 @@ const Reports = () => {
                 <tr>
                   <td
                     colSpan={6}
-                    className="py-10 text-center text-gray-400"
+                    className="py-12 text-center"
                   >
-                    No completed transactions found for this date range.
+                    <Receipt
+                      size={32}
+                      className="mx-auto mb-2 text-slate-300"
+                    />
+
+                    <p className="font-medium text-slate-600">
+                      No transactions found
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Try selecting another date range.
+                    </p>
                   </td>
                 </tr>
               )}
@@ -541,21 +746,30 @@ const Reports = () => {
           </table>
         </div>
 
-        <div className="mt-5 flex flex-wrap justify-end gap-8 border-t pt-4">
+        {/* TOTALS */}
+
+        <div className="flex flex-wrap justify-end gap-8 border-t border-slate-200 bg-slate-50 p-5">
           <div>
-            <p className="text-xs text-gray-500">Average Order Value</p>
-            <p className="font-bold text-gray-900">
+            <p className="text-xs font-medium text-slate-500">
+              Average Order Value
+            </p>
+
+            <p className="mt-1 font-bold text-slate-900">
               {money(averageOrderValue)}
             </p>
           </div>
 
           <div>
-            <p className="text-xs text-gray-500">Net Sales</p>
-            <p className="text-lg font-bold text-green-600">
+            <p className="text-xs font-medium text-slate-500">
+              Net Sales
+            </p>
+
+            <p className="mt-1 text-lg font-bold text-teal-600">
               {money(netSales)}
             </p>
           </div>
         </div>
+
       </div>
     </div>
   );

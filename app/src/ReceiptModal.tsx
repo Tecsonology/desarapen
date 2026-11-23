@@ -4,6 +4,7 @@ import type { CartItem } from "./POS";
 
 type ReceiptModalProps = {
   isOpen: boolean;
+  cashier: string;
   onClose: () => void;
   items: CartItem[];
   receiptNumber: string;
@@ -12,6 +13,7 @@ type ReceiptModalProps = {
 
 const ReceiptModal = ({
   isOpen,
+  cashier,
   onClose,
   items,
   receiptNumber,
@@ -66,21 +68,29 @@ const ReceiptModal = ({
             </h1>
 
             <p className="text-xs mt-1">
-              Your Store Address
+              2910 E. Rodriguez St. Malibay Pasay City
             </p>
+            <p className="text-xs">
+              Facebook: Pendy's Blog
+            </p>  
 
             <p className="text-xs">
               Contact: 09XX-XXX-XXXX
             </p>
 
             <p className="text-xs mt-3 font-bold">
-              SALES RECEIPT
+              ***ORDER SUMMARY***
             </p>
 
           </div>
 
           {/* TRANSACTION DETAILS */}
           <div className="py-4 text-xs space-y-1 border-b border-dashed border-gray-400">
+
+            <div className="flex justify-between">
+              <span>Cashier:</span>
+              <span>{cashier}</span>
+            </div>
 
             <div className="flex justify-between">
               <span>Receipt No:</span>
@@ -138,9 +148,7 @@ const ReceiptModal = ({
 
                 </div>
 
-                <p className="text-gray-400 text-[10px]">
-                  ₱{item.selectedSize.price.toFixed(2)} each
-                </p>
+            
 
               </div>
 
@@ -185,7 +193,7 @@ const ReceiptModal = ({
             </p>
 
             <p className="text-[10px] text-gray-400 mt-4">
-              This is a POS transaction receipt.
+              *This is not an Official Receipt
             </p>
 
           </div>
