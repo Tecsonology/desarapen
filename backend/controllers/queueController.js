@@ -5,7 +5,9 @@ const Queue = require("../models/QueueModel")
 // ==========================================
 exports.createQueue = async (req, res) => {
   try {
-    const { orders, status } = req.body;
+    const { orders, status, orderSource, kioskCode } = req.body;
+
+    console.log(orderSource, kioskCode)
 
     if (!orders || !Array.isArray(orders) || orders.length === 0) {
       return res.status(400).json({
@@ -24,6 +26,8 @@ exports.createQueue = async (req, res) => {
       queueNumber: nextQueueNumber,
       orders,
       status: status || "pending",
+      orderSource,
+      kioskCode
     });
 
     const io = req.app.get("io")

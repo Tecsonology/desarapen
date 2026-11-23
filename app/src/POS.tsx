@@ -8,6 +8,10 @@ import type { CreateOrder } from "./api/orderService";
 import { createQueue } from "./api/queueService";
 import type { QueueOrder } from "./types/queueTypes";
 import type { LoggedInUser } from "./api/userService";
+import type { Queue } from "./types/queueTypes";
+import socket from "./socket/socket.ts";
+import type { QueueStatus } from "./types/queueTypes";
+import { LayoutPanelLeft } from "lucide-react";
 
 import {
     ArrowLeft,
@@ -91,6 +95,10 @@ function POS({ showNav }: PosProp) {
 
     const [payment, setPayment] = useState(false);
     const [processingOrder, setProcessingOrder] = useState(false);
+
+    const [ openKiosk, setOpenKiosk ] = useState(false)
+    const [queues, setQueues] = useState<Queue[]>([]);
+    
 
     const [user] = useState<LoggedInUser | null>(() => {
         try {
@@ -411,6 +419,23 @@ function POS({ showNav }: PosProp) {
         }
     };
 
+    //CHANGE QUEUE STATUS
+
+      const changeStatus = async (id: string, status: QueueStatus) => {
+      try {
+        await fetch(`${import.meta.env.VITE_PUBLIC_URL}/api/queue/${id}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ status }),
+        });
+      } catch (error) {
+        console.error("Failed to update queue:", error);
+      }
+    };
+
     // ==========================================
     // FILTER PRODUCTS
     // ==========================================
@@ -425,16 +450,206 @@ function POS({ showNav }: PosProp) {
         return isActive && matchesCategory;
     });
 
+
+    //==========================================
+    // KIOSKSS
+    //=======================================
+
+    useEffect(() => {
+    const fetchQueues = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_PUBLIC_URL}/api/queue`, {
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        setQueues(data.queues || []);
+      } catch (error) {
+        console.error("Failed to fetch queues:", error);
+      }
+    };
+
+    fetchQueues();
+
+    socket.on("queue:new", (newQueue: Queue) => {
+      setQueues((prev) => [
+        ...prev.filter((queue) => queue._id !== newQueue._id),
+        newQueue,
+      ]);
+    });
+
+    socket.on("queue:updated", (updatedQueue: Queue) => {
+      setQueues((prev) => {
+        if (updatedQueue.status === "done") {
+          return prev.filter((queue) => queue._id !== updatedQueue._id);
+        }
+
+        return prev.map((queue) =>
+          queue._id === updatedQueue._id ? updatedQueue : queue
+        );
+      });
+    });
+
+    socket.on("queue:deleted", (deletedId: string) => {
+      setQueues((prev) => prev.filter((queue) => queue._id !== deletedId));
+    });
+
+    return () => {
+      socket.off("queue:new");
+      socket.off("queue:updated");
+      socket.off("queue:deleted");
+    };
+  }, []);
+
+  const handleLoadKioskOrder = (kioskQueue: Queue, id : string) => {
+    const loadedCart: CartItem[] = [];
+
+    changeStatus(id, "done")
+
+    for (const orderItem of kioskQueue.orders) {
+        const matchedProduct = products.find(
+            (p) => p.name.toLowerCase() === orderItem.productName.toLowerCase()
+        );
+
+        if (!matchedProduct) {
+            console.warn(`Product not found in POS list: ${orderItem.productName}`);
+            continue;
+        }
+
+        const matchedSize: SizeOption =
+            matchedProduct.sizes.find(
+                (s) =>
+                    s.volume.toLowerCase() === String(orderItem.size).toLowerCase() ||
+                    s.name.toLowerCase() === String(orderItem.size).toLowerCase()
+            ) || {
+                id: `custom-${orderItem.size}`,
+                name: String(orderItem.size),
+                volume: String(orderItem.size),
+                price: orderItem.price,
+            };
+
+        const safeQty = Math.min(orderItem.quantity, Math.max(0, matchedProduct.stock));
+        if (safeQty <= 0) continue;
+
+        const existingIndex = loadedCart.findIndex(
+            (c) => c._id === matchedProduct._id && c.selectedSize.id === matchedSize.id
+        );
+
+        if (existingIndex > -1) {
+            loadedCart[existingIndex].quantity += safeQty;
+        } else {
+            loadedCart.push({
+                ...matchedProduct,
+                selectedSize: matchedSize,
+                quantity: safeQty,
+            });
+        }
+    }
+
+    
+    setCartItems(loadedCart);
+    setOpenKiosk(false);
+};
+
     // ==========================================
     // RENDER
     // ==========================================
 
     return (
         <div className="flex h-dvh w-full flex-col gap-3 overflow-hidden bg-slate-100 p-2 sm:p-4 md:flex-row">
+            {
+                openKiosk && (
+                    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl bg-white p-4 shadow-sm">
+  <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="flex flex-row justify-center items-center gap-2">
+        <button
+                        onClick={()=> {
+                          setOpenKiosk(false)
+                        }}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+        <div className="flex flex-col">
+            <h1 className="text-lg font-bold text-slate-900">
+        Kiosk's Orders Queue
+      </h1>
+      <p className="text-xs text-slate-500">
+        Tap a queue number to load the order into the cart
+      </p>
+        </div>
+    </div>
 
-            {/* ======================================
-                PRODUCT SECTION
-            ====================================== */}
+    <span className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700">
+      {queues.filter((q) => q.orderSource === "Kiosk").length} Waiting
+    </span>
+  </div>
+
+  <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {queues
+        .filter((q) => q.orderSource === "Kiosk")
+        .map((item) => {
+          const itemCount = item.orders.reduce(
+            (sum, order) => sum + order.quantity,
+            0
+          );
+          const totalAmount = item.orders.reduce(
+            (sum, order) => sum + (order.subtotal ?? order.price * order.quantity),
+            0
+          );
+
+          return (
+            <button
+              key={item._id}
+              type="button"
+              onClick={() => handleLoadKioskOrder(item, item._id)}
+              className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-teal-500 hover:bg-teal-50/50 hover:shadow-sm active:scale-[0.99]"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase group-hover:text-teal-600">
+                  Queue No.
+                </span>
+                {item.kioksCode && (
+                  <span className="rounded-md bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                    Kiosk #{item.kioksCode}
+                  </span>
+                )}
+              </div>
+
+              <div className="my-2 font-mono text-3xl font-black text-slate-900 group-hover:text-teal-700">
+                {String(item.queueNumber).padStart(2, "0")}
+              </div>
+
+              <div className="flex items-center justify-between border-t border-slate-200/80 pt-2 text-xs text-slate-600">
+                <span>{itemCount} {itemCount === 1 ? "item" : "items"}</span>
+                <span className="font-bold text-slate-800">
+                  ₱{totalAmount.toFixed(2)}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+    </div>
+
+    {queues.filter((q) => q.orderSource === "Kiosk").length === 0 && (
+      <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-center text-slate-400">
+        <p className="text-sm font-semibold text-slate-500">
+          No active kiosk orders
+        </p>
+        <p className="mt-1 text-xs">
+          New kiosk orders will appear here automatically.
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+                )
+            }
+            {
+                !openKiosk && (
+                  
 
             <div className="menu-container flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:w-2/3">
 
@@ -472,7 +687,8 @@ function POS({ showNav }: PosProp) {
                 {/* CATEGORY FILTER */}
 
                 <div className="mb-3 flex shrink-0 gap-2 overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide">
-                    {categories.map((item) => (
+                    <div className="w-full flex gap-2">
+                        {categories.map((item) => (
                         <button
                             key={item}
                             className={`shrink-0 rounded-lg px-4 py-2 text-xs font-semibold transition sm:text-sm ${
@@ -485,6 +701,12 @@ function POS({ showNav }: PosProp) {
                             {item}
                         </button>
                     ))}
+                    </div>
+
+                    <button className="mx-2 bg-blue-400 text-white cursor-pointer px-2 py-1 flex flex-row justify-center items-center rounded-md gap-2" onClick={()=> {setOpenKiosk(true)}}>
+                        <LayoutPanelLeft />
+                        <p className="font-bold">Kioks Queue</p>
+                    </button>
                 </div>
 
                 {/* PRODUCT LIST SCROLL AREA */}
@@ -566,6 +788,8 @@ function POS({ showNav }: PosProp) {
                     )}
                 </div>
             </div>
+                )
+            }
 
             {/* ======================================
                 CART SECTION

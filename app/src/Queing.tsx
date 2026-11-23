@@ -92,7 +92,7 @@ const Queing = () => {
         {activeQueues.map((queue) => (
           <div
             key={queue._id}
-            className="rounded-sm border bg-white p-5 shadow"
+            className={`rounded-sm border ${queue.orderSource === "Kiosk" ? `bg-red-600` : `bg-white`} p-5 shadow`}
           >
             <h2 className="text-xl font-bold">Queue #{queue.queueNumber}</h2>
 

@@ -16,4 +16,7 @@ export interface Queue {
   orders: QueueOrder[];
   time: string;
   status: QueueStatus;
+  kioksCode?: number | null,
+  orderSource?: "Cashier" | "Kiosk"
+
 }

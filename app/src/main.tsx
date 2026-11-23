@@ -14,6 +14,7 @@ import Settings from './Settings.tsx'
 import Users from './Users.tsx'
 import Employees from './Employees.tsx'
 import Queuing from './Queing.tsx'
+import Kiosk from './Kiosk.tsx'
 
 const router = createBrowserRouter([
   {
@@ -77,7 +78,8 @@ const router = createBrowserRouter([
   },
 
   {
-
+    path: "kiosk",
+    element: <Kiosk />
   }
 ])
 

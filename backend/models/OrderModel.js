@@ -107,6 +107,7 @@ const orderSchema = new mongoose.Schema(
       default: "Completed",
     },
 
+
     notes: {
       type: String,
       default: "",

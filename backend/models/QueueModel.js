@@ -22,7 +22,19 @@ const queueSchema = new mongoose.Schema({
         type: String,
         enum: ["pending", "preparing", "done"],
         default: "pending"
-    }
+    },
+
+     orderSource: {
+      type: String,
+      enum: ["Cashier", "Kiosk"],
+      default: "Cashier"
+    },
+
+    kioskCode: {
+      type: String,
+      default: null
+    },
+
 
 }, {
     timestamps: true

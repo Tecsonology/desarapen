@@ -5,6 +5,8 @@ const URL = `${import.meta.env.VITE_PUBLIC_URL}/api/queue`
 type Queue = {
     orders: QueueOrder[],
     status: QueueStatus
+    orderSource?: "Cashier" | "Kiosk",
+    kioskCode?: number
 }
 
 const handleResponse = async ( response: Response ) => {

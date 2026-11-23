@@ -41,9 +41,7 @@ function Payment({
             payment
         );
 
-        setCashReceived(0)
 
-        change = 0
     };
 
     return (
